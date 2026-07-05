@@ -1,5 +1,4 @@
-# BarcodeBuddy Homeassistant Docker Image
-
+# Barcode Buddy for Grocy — Home Assistant Add-on
 
 ![Supports aarch64 Architecture][aarch64-shield]
 ![Supports amd64 Architecture][amd64-shield]
@@ -13,50 +12,89 @@
 [armv7-shield]: https://img.shields.io/badge/armv7-yes-green.svg
 [i386-shield]: https://img.shields.io/badge/i386-yes-green.svg
 
+Runs [BarcodeBuddy](https://github.com/Forceu/barcodebuddy) — a barcode scanning
+front-end for [Grocy](https://grocy.info/) — as a Home Assistant add-on,
+with configuration wired up for Grocy add-ons running behind Supervisor's
+Ingress.
 
-This is the docker repo optimized for Home Assistant of [BarcodeBuddy](https://github.com/Forceu/barcodebuddy).
+This is a maintained fork of
+[Forceu/barcodebuddy-homeassistant](https://github.com/Forceu/barcodebuddy-homeassistant),
+rebuilt to work reliably as an add-on rather than as a thin, unconfigured
+wrapper around the upstream Docker image. See [Compatibility notes](#compatibility-notes)
+for what specifically changed and why.
 
-This is a fork of [Forceu/barcodebuddy-homeassistant](https://github.com/Forceu/barcodebuddy-homeassistant) that fixes two long-standing issues:
+## Features
 
-- **Config was lost on every restart/update** ([upstream #4](https://github.com/Forceu/barcodebuddy-homeassistant/issues/4)): the add-on mapped Home Assistant's own `config` directory onto the container's `/config` path, which is where BarcodeBuddy actually stores its database and settings. Fixed by switching to the `addon_config` map type, which gives the add-on its own persistent, add-on-private folder at that same container path.
-- **Couldn't connect to a Grocy add-on running behind Ingress** ([upstream discussion #223](https://github.com/Forceu/barcodebuddy/discussions/223)): BarcodeBuddy's setup wizard wants a plain `IP:port/api/` URL, which Ingress doesn't provide. This fork adds `grocy_api_url` / `grocy_api_key` options that are passed straight into BarcodeBuddy via its `BBUDDY_OVERRIDDEN_USER_CONFIG` environment variable at startup, skipping the wizard entirely. The other add-on options (`require_api_key`, `disable_auth`, `debug`, `curl_allow_insecure_ssl_*`) are now also actually wired up (previously they were declared but never applied).
+- Scan barcodes and add/consume/open products in Grocy from a phone,
+  browser, or a physical scanner
+- Connects to a Grocy add-on running behind Ingress — no need to expose
+  Grocy's port to your host network
+- Add-on options map directly to BarcodeBuddy's configuration, so it can be
+  fully configured without going through the first-run setup wizard
+- Configuration persists correctly across add-on restarts and updates
 
-### Install Home Assistant
+## Installation
 
-![](images/add-repo-url.png?raw=true)
-1. Click context menu in addon section
-2. Add custom repo url and point to this repo: `https://github.com/MarcelMuechler/barcodebuddy-homeassistant`
+1. In Home Assistant, go to **Settings → Add-ons → Add-on Store**
+2. Open the **⋮** menu (top right) → **Repositories**
+3. Add: `https://github.com/MarcelMuechler/barcodebuddy-homeassistant`
+4. Install **Barcode Buddy for Grocy** from the store listing
 
-### Configuration
+## Configuration
 
-Set `grocy_api_url` and `grocy_api_key` in the add-on's Configuration tab. For the URL, use Grocy's **internal container IP and Ingress port** (not the default 80/443 — Grocy's own Ingress-enabled web server listens on the Supervisor-assigned Ingress port, e.g.:
+| Option | Type | Description |
+|---|---|---|
+| `grocy_api_url` | string | Grocy's API URL, reachable from *this* add-on's container. For a Grocy add-on running behind Ingress, use its container IP and Ingress port (not 80/443) — e.g. `http://172.30.33.2:8099/api/`. Find both via the Grocy add-on's info page in Supervisor (`ingress_port` field). |
+| `grocy_api_key` | password | A Grocy API key (Grocy → user profile → **Manage API keys**). |
+| `grocy_external_url` | string | Optional. A URL *your browser* can reach, used for links like "Create Product" that open Grocy directly. Leave empty to fall back to `grocy_api_url` (usually not browser-reachable if Grocy runs behind Ingress). |
+| `require_api_key` | boolean | Require an API key for BarcodeBuddy's own REST API. |
+| `disable_auth` | boolean | Disable BarcodeBuddy's user login. |
+| `debug` | boolean | Enable verbose logging. |
+| `curl_allow_insecure_ssl_ca` | boolean | Accept self-signed/untrusted CA certificates when connecting to Grocy. |
+| `curl_allow_insecure_ssl_host` | boolean | Accept a certificate hostname mismatch when connecting to Grocy (common when connecting by internal IP rather than the certificate's hostname). |
 
-```
-http://172.30.33.2:8099/api/
-```
+Both add-ons sit on Supervisor's internal Docker network by default, so
+container-to-container traffic doesn't need any host port exposed. If you
+want "Create Product"-style links to open correctly in a browser, map
+Grocy's `80/tcp` to a host port in its own add-on's **Network** tab and
+point `grocy_external_url` at that.
 
-Find the container IP via the Grocy add-on's info page in Supervisor (or `ha_get_addon`/the REST API) and the Ingress port via the same (`ingress_port` field). Both add-ons sit on Supervisor's internal Docker network, so no host port needs to be exposed for this to work.
+## Compatibility notes
 
-If you use the "Create Product" / "Create recipe" etc. links from BarcodeBuddy, also set `grocy_external_url` to a URL your **browser** can reach (the internal container IP is only reachable from other add-ons, not from your phone/PC) — e.g. Grocy's directly-mapped host port:
+A few upstream behaviors required a workaround to run reliably as an
+add-on; noted here so they're not mistaken for bugs in this fork later:
 
-```
-https://192.168.1.x:8080/
-```
+- **Persistent storage**: the upstream Docker image ships `/data` as a
+  symlink to `/config`. Home Assistant's automatic per-add-on `/data` mount
+  and this add-on's own `/config` mount both resolve to that same path,
+  which raced unpredictably. The image is rebuilt here with `/data` as an
+  independent real directory.
+- **`EXTERNAL_GROCY_URL`**: BarcodeBuddy's environment-variable config
+  override can't set this value away from its default (a `settype()` call
+  against a `null`-typed default always yields `null`, regardless of
+  input). The default is patched to an empty string so the override takes
+  effect.
+- **Umlauts/special characters in product names**: the "Create Product"
+  link builder decodes HTML entities with `htmlspecialchars_decode()`,
+  which doesn't handle named entities like `&uuml;`. Patched to
+  `html_entity_decode()`.
 
-(map Grocy's `80/tcp` to a host port in its own add-on's Network tab first).
+## Development
 
-## Contributors
-<a href="https://github.com/forceu/barcodebuddy-homeassistant/graphs/contributors">
-  <img src="https://contributors-img.web.app/image?repo=forceu/barcodebuddy-homeassistant" />
-</a>
+The image is a thin layer on top of `f0rc3/barcodebuddy` — see
+[`Dockerfile`](Dockerfile) for the patches applied at build time and
+[`run.sh`](run.sh) for how add-on options are translated into BarcodeBuddy's
+`BBUDDY_*` environment variables. Bump `version` in `config.yaml` when
+changing either, so Supervisor picks up the update.
+
+Contributions and issue reports are welcome.
 
 ## License
-The MIT License (MIT)
 
-Based on: https://github.com/linuxserver/docker-grocy
+MIT — see [`LICENSE`](LICENSE).
 
-## Donations
-
-As with all Free software, the power is less in the finances and more in the collective efforts. I really appreciate every pull request and bug report offered up by BarcodeBuddy's users, so please keep that stuff coming. If however, you're not one for coding/design/documentation, and would like to contribute financially, you can do so with the link below. Every help is very much appreciated!
-
-[![paypal](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=donate@bulling.mobi&lc=US&item_name=BarcodeBuddy&no_note=0&cn=&currency_code=EUR&bn=PP-DonationsBF:btn_donateCC_LG.gif:NonHosted) [![LiberaPay](https://img.shields.io/badge/Donate-LiberaPay-green.svg)](https://liberapay.com/MBulling/donate)
+Based on [Forceu/barcodebuddy-homeassistant](https://github.com/Forceu/barcodebuddy-homeassistant)
+and [Forceu/barcodebuddy-docker](https://github.com/Forceu/barcodebuddy-docker).
+Consider supporting BarcodeBuddy's original author directly:
+[PayPal](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=donate@bulling.mobi&lc=US&item_name=BarcodeBuddy&no_note=0&cn=&currency_code=EUR&bn=PP-DonationsBF:btn_donateCC_LG.gif:NonHosted) ·
+[LiberaPay](https://liberapay.com/MBulling/donate)
