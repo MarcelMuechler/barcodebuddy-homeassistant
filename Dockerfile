@@ -16,8 +16,18 @@ LABEL \
 
 RUN apk add --no-cache jq
 
+# The upstream image ships /data as a symlink to /config. Bind-mounting onto a
+# symlinked destination is unreliable in Docker (sometimes it shadows the
+# link, sometimes it silently doesn't), which made HA's automatic per-addon
+# /data mount and our own /config mount race unpredictably. Make /data a
+# real, independent directory so both mounts are unambiguous.
+RUN rm -f /data && mkdir -p /data
+
 COPY run.sh /run.sh
 RUN chmod +x /run.sh
 
+# Setting ENTRYPOINT resets an inherited CMD to empty, so it must be
+# redeclared here or run.sh's "exec $@" has nothing to run.
 ENTRYPOINT ["/run.sh"]
+CMD ["/app/supervisor"]
 
