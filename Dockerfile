@@ -12,5 +12,12 @@ LABEL \
     io.hass.description="Barcode system for Grocy" \
     io.hass.arch="${BUILD_ARCH}" \
     io.hass.type="addon" \
-    io.hass.version=${BUILD_VERSION} 
+    io.hass.version=${BUILD_VERSION}
+
+RUN apk add --no-cache jq
+
+COPY run.sh /run.sh
+RUN chmod +x /run.sh
+
+ENTRYPOINT ["/run.sh"]
 

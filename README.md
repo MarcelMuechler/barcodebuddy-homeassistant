@@ -16,11 +16,26 @@
 
 This is the docker repo optimized for Home Assistant of [BarcodeBuddy](https://github.com/Forceu/barcodebuddy).
 
+This is a fork of [Forceu/barcodebuddy-homeassistant](https://github.com/Forceu/barcodebuddy-homeassistant) that fixes two long-standing issues:
+
+- **Config was lost on every restart/update** ([upstream #4](https://github.com/Forceu/barcodebuddy-homeassistant/issues/4)): the add-on mapped Home Assistant's own `config` directory onto the container's `/config` path, which is where BarcodeBuddy actually stores its database and settings. Fixed by switching to the `addon_config` map type, which gives the add-on its own persistent, add-on-private folder at that same container path.
+- **Couldn't connect to a Grocy add-on running behind Ingress** ([upstream discussion #223](https://github.com/Forceu/barcodebuddy/discussions/223)): BarcodeBuddy's setup wizard wants a plain `IP:port/api/` URL, which Ingress doesn't provide. This fork adds `grocy_api_url` / `grocy_api_key` options that are passed straight into BarcodeBuddy via its `BBUDDY_OVERRIDDEN_USER_CONFIG` environment variable at startup, skipping the wizard entirely. The other add-on options (`require_api_key`, `disable_auth`, `debug`, `curl_allow_insecure_ssl_*`) are now also actually wired up (previously they were declared but never applied).
+
 ### Install Home Assistant
 
 ![](images/add-repo-url.png?raw=true)
 1. Click context menu in addon section
-2. Add custom repo url and point to this repo https://github.com/Forceu/barcodebuddy-homeassistant
+2. Add custom repo url and point to this repo: `https://github.com/MarcelMuechler/barcodebuddy-homeassistant`
+
+### Configuration
+
+Set `grocy_api_url` and `grocy_api_key` in the add-on's Configuration tab. For the URL, use Grocy's **internal add-on hostname**, not the Ingress URL — add-on containers can reach each other directly over Supervisor's internal Docker network via `<slug>.local.hass.io`, e.g.:
+
+```
+http://a0d7b954-grocy.local.hass.io/api/
+```
+
+(the exact slug depends on which repository your Grocy add-on came from — check the Grocy add-on's info page in Supervisor, or `ha_get_addon`/the REST API, for the precise hostname). You do not need to expose Grocy's port to the host network for this to work.
 
 ## Contributors
 <a href="https://github.com/forceu/barcodebuddy-homeassistant/graphs/contributors">

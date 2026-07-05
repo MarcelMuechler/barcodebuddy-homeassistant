@@ -1,6 +1,6 @@
 ---
 name: Barcode Buddy for Grocy
-version: dev-docker-based
+version: "2.0.0"
 slug: bbuddy-grocy
 description: Barcode system for Grocy
 url: https://github.com/Forceu/barcodebuddy
@@ -15,19 +15,23 @@ arch:
 boot: auto
 init: false
 map:
-- config:rw
-- ssl
+  - type: addon_config
+    read_only: false
 ports:
   80/tcp: 8621
 ports_description:
   80/tcp: Web interface
 options:
+  grocy_api_url: ""
+  grocy_api_key: ""
   require_api_key: false
   disable_auth: false
   debug: false
   curl_allow_insecure_ssl_ca: false
   curl_allow_insecure_ssl_host: false
 schema:
+  grocy_api_url: str?
+  grocy_api_key: password?
   require_api_key: bool
   disable_auth: bool
   debug: bool
