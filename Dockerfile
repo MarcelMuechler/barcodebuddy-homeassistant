@@ -31,6 +31,13 @@ RUN rm -f /data && mkdir -p /data
 # to an empty string so gettype() is "string" instead.
 RUN sed -i 's/const EXTERNAL_GROCY_URL[[:space:]]*=[[:space:]]*null;/const EXTERNAL_GROCY_URL = "";/' /app/bbuddy/config-dist.php
 
+# sanitizeString() runs product names through FILTER_SANITIZE_FULL_SPECIAL_CHARS,
+# which turns "Süßer Senf" into "S&uuml;&szlig;er Senf". The "Create Product"
+# link then only calls htmlspecialchars_decode() (undoes &amp;/&lt;/&gt;/&quot;/&#039;
+# only) instead of html_entity_decode() (undoes named entities like &uuml;
+# too), so those entities are still there when the name is sent to Grocy.
+RUN sed -i 's/htmlspecialchars_decode(\$item\[.name.\], ENT_QUOTES)/html_entity_decode($item["name"], ENT_QUOTES)/' /app/bbuddy/index.php
+
 COPY run.sh /run.sh
 RUN chmod +x /run.sh
 
