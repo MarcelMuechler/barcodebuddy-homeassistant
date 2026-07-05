@@ -1,10 +1,14 @@
 #!/bin/sh
-set -e
 
 OPTIONS=/data/options.json
 
+echo "run.sh: contents of /data:" >&2
+ls -la /data >&2 2>&1
+
 get_opt() {
-  jq -r --arg k "$1" '.[$k] // empty' "$OPTIONS"
+  if [ -f "$OPTIONS" ]; then
+    jq -r --arg k "$1" '.[$k] // empty' "$OPTIONS" 2>/dev/null
+  fi
 }
 
 GROCY_API_URL=$(get_opt grocy_api_url)
