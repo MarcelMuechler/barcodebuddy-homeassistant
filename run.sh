@@ -36,6 +36,14 @@ SSL_HOST=$(get_opt curl_allow_insecure_ssl_host)
 [ -n "$SSL_HOST" ] && export BBUDDY_CURL_ALLOW_INSECURE_SSL_HOST="$SSL_HOST"
 [ -n "$GROCY_EXTERNAL_URL" ] && export BBUDDY_EXTERNAL_GROCY_URL="$GROCY_EXTERNAL_URL"
 
+# Fix up an already-persisted config.php from before the Dockerfile's
+# build-time sed existed - see the Dockerfile comment for why a null
+# default breaks BBUDDY_EXTERNAL_GROCY_URL.
+PERSISTED_CONFIG="/config/data/config.php"
+if [ -f "$PERSISTED_CONFIG" ]; then
+  sed -i 's/const EXTERNAL_GROCY_URL[[:space:]]*=[[:space:]]*null;/const EXTERNAL_GROCY_URL = "";/' "$PERSISTED_CONFIG"
+fi
+
 if [ -n "$GROCY_API_URL" ] && [ -n "$GROCY_API_KEY" ]; then
   export BBUDDY_OVERRIDDEN_USER_CONFIG="GROCY_API_URL=${GROCY_API_URL};GROCY_API_KEY=${GROCY_API_KEY}"
 fi

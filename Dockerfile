@@ -23,6 +23,14 @@ RUN apk add --no-cache jq
 # real, independent directory so both mounts are unambiguous.
 RUN rm -f /data && mkdir -p /data
 
+# BarcodeBuddy's env-var override mechanism (loadConfig() in
+# configProcessing.inc.php) does `settype($result, gettype($originalVar))`.
+# For a const that defaults to null, gettype() returns "NULL", and
+# settype($x, "NULL") always yields null - so BBUDDY_EXTERNAL_GROCY_URL can
+# never actually take effect against the stock default. Change the default
+# to an empty string so gettype() is "string" instead.
+RUN sed -i 's/const EXTERNAL_GROCY_URL[[:space:]]*=[[:space:]]*null;/const EXTERNAL_GROCY_URL = "";/' /app/bbuddy/config-dist.php
+
 COPY run.sh /run.sh
 RUN chmod +x /run.sh
 
