@@ -22,6 +22,7 @@ get_opt() {
 
 GROCY_API_URL=$(get_opt grocy_api_url)
 GROCY_API_KEY=$(get_opt grocy_api_key)
+GROCY_EXTERNAL_URL=$(get_opt grocy_external_url)
 REQUIRE_API_KEY=$(get_opt require_api_key)
 DISABLE_AUTH=$(get_opt disable_auth)
 DEBUG=$(get_opt debug)
@@ -33,6 +34,7 @@ SSL_HOST=$(get_opt curl_allow_insecure_ssl_host)
 [ -n "$DEBUG" ] && export BBUDDY_IS_DEBUG="$DEBUG"
 [ -n "$SSL_CA" ] && export BBUDDY_CURL_ALLOW_INSECURE_SSL_CA="$SSL_CA"
 [ -n "$SSL_HOST" ] && export BBUDDY_CURL_ALLOW_INSECURE_SSL_HOST="$SSL_HOST"
+[ -n "$GROCY_EXTERNAL_URL" ] && export BBUDDY_EXTERNAL_GROCY_URL="$GROCY_EXTERNAL_URL"
 
 if [ -n "$GROCY_API_URL" ] && [ -n "$GROCY_API_KEY" ]; then
   export BBUDDY_OVERRIDDEN_USER_CONFIG="GROCY_API_URL=${GROCY_API_URL};GROCY_API_KEY=${GROCY_API_KEY}"

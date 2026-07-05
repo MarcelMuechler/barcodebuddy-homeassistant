@@ -24,6 +24,7 @@ ports_description:
 options:
   grocy_api_url: ""
   grocy_api_key: ""
+  grocy_external_url: ""
   require_api_key: false
   disable_auth: false
   debug: false
@@ -32,6 +33,7 @@ options:
 schema:
   grocy_api_url: str?
   grocy_api_key: password?
+  grocy_external_url: str?
   require_api_key: bool
   disable_auth: bool
   debug: bool

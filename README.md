@@ -29,13 +29,21 @@ This is a fork of [Forceu/barcodebuddy-homeassistant](https://github.com/Forceu/
 
 ### Configuration
 
-Set `grocy_api_url` and `grocy_api_key` in the add-on's Configuration tab. For the URL, use Grocy's **internal add-on hostname**, not the Ingress URL — add-on containers can reach each other directly over Supervisor's internal Docker network via `<slug>.local.hass.io`, e.g.:
+Set `grocy_api_url` and `grocy_api_key` in the add-on's Configuration tab. For the URL, use Grocy's **internal container IP and Ingress port** (not the default 80/443 — Grocy's own Ingress-enabled web server listens on the Supervisor-assigned Ingress port, e.g.:
 
 ```
-http://a0d7b954-grocy.local.hass.io/api/
+http://172.30.33.2:8099/api/
 ```
 
-(the exact slug depends on which repository your Grocy add-on came from — check the Grocy add-on's info page in Supervisor, or `ha_get_addon`/the REST API, for the precise hostname). You do not need to expose Grocy's port to the host network for this to work.
+Find the container IP via the Grocy add-on's info page in Supervisor (or `ha_get_addon`/the REST API) and the Ingress port via the same (`ingress_port` field). Both add-ons sit on Supervisor's internal Docker network, so no host port needs to be exposed for this to work.
+
+If you use the "Create Product" / "Create recipe" etc. links from BarcodeBuddy, also set `grocy_external_url` to a URL your **browser** can reach (the internal container IP is only reachable from other add-ons, not from your phone/PC) — e.g. Grocy's directly-mapped host port:
+
+```
+https://192.168.1.x:8080/
+```
+
+(map Grocy's `80/tcp` to a host port in its own add-on's Network tab first).
 
 ## Contributors
 <a href="https://github.com/forceu/barcodebuddy-homeassistant/graphs/contributors">
