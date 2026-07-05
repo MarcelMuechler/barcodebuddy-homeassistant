@@ -17,6 +17,8 @@ init: false
 map:
   - type: addon_config
     read_only: false
+  - type: data
+    read_only: false
 ports:
   80/tcp: 8621
 ports_description:

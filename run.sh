@@ -1,12 +1,21 @@
 #!/bin/sh
 
-OPTIONS=/data/options.json
+echo "run.sh: contents of /data/:" >&2
+ls -la /data/ >&2 2>&1
+echo "run.sh: contents of /config/:" >&2
+ls -la /config/ >&2 2>&1
 
-echo "run.sh: contents of /data:" >&2
-ls -la /data >&2 2>&1
+OPTIONS=""
+for candidate in /data/options.json /config/options.json; do
+  if [ -f "$candidate" ]; then
+    OPTIONS="$candidate"
+    break
+  fi
+done
+echo "run.sh: using options file: ${OPTIONS:-none found}" >&2
 
 get_opt() {
-  if [ -f "$OPTIONS" ]; then
+  if [ -n "$OPTIONS" ]; then
     jq -r --arg k "$1" '.[$k] // empty' "$OPTIONS" 2>/dev/null
   fi
 }
